@@ -90,8 +90,8 @@ export async function generateBatchA4Pdf(
       // Generate QR Code SVG Data URI
       const qrDataUri = await generateQRCodeSVGDataUri(scanUrl);
       
-      // Generate Plaque SVG
-      const plaqueSvg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri);
+      // Generate Plaque SVG with custom positioning if configured
+      const plaqueSvg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri, item.qrPosition);
       
       // Convert to high-res PNG bytes
       const pngBytes = await svgToPngBytes(plaqueSvg, 1200);
@@ -139,7 +139,7 @@ export async function generateSinglePlaquePdf(
 
   const scanUrl = `${baseUrl.replace(/\/$/, '')}/q/${item.shortCode}`;
   const qrDataUri = await generateQRCodeSVGDataUri(scanUrl);
-  const plaqueSvg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri);
+  const plaqueSvg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri, item.qrPosition);
   const pngBytes = await svgToPngBytes(plaqueSvg, 1200);
   const embeddedImage = await pdfDoc.embedPng(pngBytes);
 

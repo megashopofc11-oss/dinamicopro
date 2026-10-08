@@ -1,11 +1,23 @@
-export type PlaqueModelId = 'google_azul' | 'google_alternativo' | 'instagram' | 'whatsapp';
+export type PlaqueModelId =
+  | 'google_alternativo'
+  | 'google_azul'
+  | 'google_preto'
+  | 'google_azul_novo'
+  | 'instagram'
+  | 'instagram_rosa'
+  | 'whatsapp'
+  | 'whatsapp_verde'
+  | 'pix_pb'
+  | 'wifi_pb';
+
+export type PlaqueCategory = 'all' | 'google' | 'instagram' | 'whatsapp' | 'pix' | 'wifi';
 
 export interface PlaqueModel {
   id: PlaqueModelId;
   name: string;
   shortName: string;
   tagline: string;
-  category: 'google' | 'instagram' | 'whatsapp';
+  category: 'google' | 'instagram' | 'whatsapp' | 'pix' | 'wifi';
   primaryColor: string;
   accentColor: string;
   description: string;
@@ -32,6 +44,19 @@ export interface Batch {
 
 export type QRStatus = 'pending' | 'active' | 'disabled';
 
+export interface QRPositionOffset {
+  x?: number; // X coordinate in 1000x1000 viewport
+  y?: number; // Y coordinate in 1000x1000 viewport
+  size?: number; // Size in 1000x1000 viewport
+}
+
+export interface QRHistoryEntry {
+  timestamp: string;
+  action: string;
+  previousUrl?: string;
+  newUrl?: string;
+}
+
 export interface QRCodeItem {
   id: string; // "000001"
   codeNumber: number; // 1
@@ -45,6 +70,9 @@ export interface QRCodeItem {
   targetUrl?: string;
   status: QRStatus;
   scanCount: number;
+  qrPosition?: QRPositionOffset;
+  notes?: string;
+  history?: QRHistoryEntry[];
   createdAt: string;
   updatedAt?: string;
 }

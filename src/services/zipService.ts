@@ -26,7 +26,7 @@ export async function generateBatchZip(
 
     // 1. Generate QR Code SVG Data Uri & Plaque SVG
     const qrDataUri = await generateQRCodeSVGDataUri(scanUrl);
-    const plaqueSvg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri);
+    const plaqueSvg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri, item.qrPosition);
 
     // 2. High-res Plaque PNG (1200x1200px for 100x100mm 300+ DPI print)
     const plaquePngBytes = await svgToPngBytes(plaqueSvg, 1200);

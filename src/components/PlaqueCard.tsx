@@ -39,7 +39,7 @@ export const PlaqueCard: React.FC<PlaqueCardProps> = ({
     async function renderPlaque() {
       try {
         const qrDataUri = await generateQRCodeSVGDataUri(permanentUrl);
-        const svg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri);
+        const svg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri, item.qrPosition);
         if (isMounted) {
           setSvgContent(svg);
         }
@@ -51,7 +51,7 @@ export const PlaqueCard: React.FC<PlaqueCardProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [item.modelId, item.plaqueId, permanentUrl]);
+  }, [item.modelId, item.plaqueId, permanentUrl, item.qrPosition]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(permanentUrl);
@@ -64,7 +64,7 @@ export const PlaqueCard: React.FC<PlaqueCardProps> = ({
     try {
       setDownloading(true);
       const qrDataUri = await generateQRCodeSVGDataUri(permanentUrl);
-      const svg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri);
+      const svg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri, item.qrPosition);
       const pngBytes = await svgToPngBytes(svg, 1200);
 
       const blob = new Blob([pngBytes as unknown as BlobPart], { type: 'image/png' });

@@ -42,16 +42,28 @@ export const RedirectHandler: React.FC<RedirectHandlerProps> = ({ code }) => {
             console.error('Error logging scan count:', e)
           );
 
-          // Prepare destination
+          // Prepare destination and validate protocol
           let dest = qrItem.targetUrl.trim();
           if (!dest.match(/^https?:\/\//i)) {
             dest = 'https://' + dest;
           }
 
-          // Smooth redirect with 800ms visual confirmation
-          setTimeout(() => {
-            window.location.href = dest;
-          }, 800);
+          try {
+            const parsed = new URL(dest);
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+              throw new Error('Protocolo inválido');
+            }
+
+            // Smooth redirect with 800ms visual confirmation
+            setTimeout(() => {
+              window.location.href = dest;
+            }, 800);
+          } catch (urlErr) {
+            console.error('Destino inseguro ou inválido:', urlErr);
+            setNotFound(true);
+            setLoading(false);
+            return;
+          }
         }
       } catch (err) {
         console.error('Error during redirection check:', err);

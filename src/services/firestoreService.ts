@@ -12,7 +12,7 @@ import {
   increment,
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase/config';
-import { Batch, QRCodeItem, PlaqueModelId, CounterState, SystemSettings, QRStatus } from '../types';
+import { Batch, QRCodeItem, PlaqueModelId, CounterState, SystemSettings, QRStatus, QRPositionOffset } from '../types';
 
 export const STORAGE_BATCHES_KEY = 'dinamico_pro_batches_v2';
 export const STORAGE_ITEMS_PREFIX = 'dinamico_pro_items_v2_';
@@ -414,7 +414,7 @@ export async function recordQRCodeScan(shortCode: string): Promise<void> {
 }
 
 /**
- * Updates destination target URL, client name, and status for a QR code.
+ * Updates destination target URL, client name, qrPosition, notes, and status for a QR code.
  */
 export async function updateQRCodeDestination(params: {
   id: string; // shortCode or doc ID
@@ -422,17 +422,27 @@ export async function updateQRCodeDestination(params: {
   clientName?: string;
   targetUrl: string;
   status: QRStatus;
+  qrPosition?: QRPositionOffset;
+  notes?: string;
 }): Promise<void> {
-  const { id, batchId, clientName, targetUrl, status } = params;
+  const { id, batchId, clientName, targetUrl, status, qrPosition, notes } = params;
   const docRef = doc(db, 'qrCodes', id);
 
   try {
-    await updateDoc(docRef, {
+    const updatePayload: Record<string, any> = {
       clientName: clientName || '',
       targetUrl: targetUrl.trim(),
       status,
       updatedAt: new Date().toISOString(),
-    });
+    };
+    if (qrPosition !== undefined) {
+      updatePayload.qrPosition = qrPosition;
+    }
+    if (notes !== undefined) {
+      updatePayload.notes = notes;
+    }
+
+    await updateDoc(docRef, updatePayload);
 
     // Recalculate activeCount in batch if needed
     try {
@@ -460,6 +470,8 @@ export async function updateQRCodeDestination(params: {
                 clientName: clientName || '',
                 targetUrl: targetUrl.trim(),
                 status,
+                ...(qrPosition !== undefined ? { qrPosition } : {}),
+                ...(notes !== undefined ? { notes } : {}),
                 updatedAt: new Date().toISOString(),
               }
             : item
