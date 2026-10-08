@@ -1,4 +1,11 @@
-import { PlaqueModel, PlaqueModelId, QRPositionOffset } from '../types';
+import {
+  PlaqueModel,
+  PlaqueModelId,
+  QRPositionOffset,
+  ModelCalibrationConfig,
+  ModelNormalizedPlacement,
+  ModelCalibrationsMap,
+} from '../types';
 import { TEMPLATE_ASSETS } from './templateAssets';
 
 export interface ModelLayoutConfig {
@@ -12,6 +19,99 @@ export interface ModelLayoutConfig {
     anchor: 'middle' | 'end' | 'start';
     color: string;
     prefix?: string;
+  };
+}
+
+/**
+ * Default normalized calibrations for all registered models.
+ * Coordinated strictly in normalized 0.0 to 1.0 space relative to 100x100mm (1000x1000 canvas).
+ */
+export const DEFAULT_MODEL_CALIBRATIONS: Record<PlaqueModelId, ModelCalibrationConfig> = {
+  google_alternativo: {
+    modelId: 'google_alternativo',
+    version: '1.0',
+    qrPlacement: { x: 0.115, y: 0.600, size: 0.280 },
+    safeMarginTopMm: 18.8,
+    safeMarginBottomMm: 12.0,
+  },
+  google_azul: {
+    modelId: 'google_azul',
+    version: '1.0',
+    qrPlacement: { x: 0.665, y: 0.585, size: 0.215 },
+    safeMarginTopMm: 8.5,
+    safeMarginBottomMm: 19.0,
+  },
+  google_preto: {
+    modelId: 'google_preto',
+    version: '1.0',
+    qrPlacement: { x: 0.556, y: 0.465, size: 0.240 },
+    safeMarginTopMm: 10.5,
+    safeMarginBottomMm: 11.8,
+  },
+  google_azul_novo: {
+    modelId: 'google_azul_novo',
+    version: '1.0',
+    qrPlacement: { x: 0.556, y: 0.465, size: 0.240 },
+    safeMarginTopMm: 10.5,
+    safeMarginBottomMm: 11.8,
+  },
+  instagram: {
+    modelId: 'instagram',
+    version: '1.0',
+    qrPlacement: { x: 0.665, y: 0.580, size: 0.215 },
+    safeMarginTopMm: 13.0,
+    safeMarginBottomMm: 19.5,
+  },
+  instagram_rosa: {
+    modelId: 'instagram_rosa',
+    version: '1.0',
+    qrPlacement: { x: 0.547, y: 0.526, size: 0.220 },
+    safeMarginTopMm: 7.1,
+    safeMarginBottomMm: 7.2,
+  },
+  whatsapp: {
+    modelId: 'whatsapp',
+    version: '1.0',
+    qrPlacement: { x: 0.607, y: 0.503, size: 0.240 },
+    safeMarginTopMm: 4.2,
+    safeMarginBottomMm: 15.9,
+  },
+  whatsapp_verde: {
+    modelId: 'whatsapp_verde',
+    version: '1.0',
+    qrPlacement: { x: 0.572, y: 0.559, size: 0.210 },
+    safeMarginTopMm: 5.4,
+    safeMarginBottomMm: 5.4,
+  },
+  pix_pb: {
+    modelId: 'pix_pb',
+    version: '1.0',
+    qrPlacement: { x: 0.576, y: 0.575, size: 0.200 },
+    safeMarginTopMm: 4.7,
+    safeMarginBottomMm: 4.8,
+  },
+  wifi_pb: {
+    modelId: 'wifi_pb',
+    version: '1.0',
+    qrPlacement: { x: 0.576, y: 0.575, size: 0.200 },
+    safeMarginTopMm: 4.8,
+    safeMarginBottomMm: 4.8,
+  },
+};
+
+export function normalizePlacement(pos: { x: number; y: number; size: number }): ModelNormalizedPlacement {
+  return {
+    x: Number((pos.x / 1000).toFixed(4)),
+    y: Number((pos.y / 1000).toFixed(4)),
+    size: Number((pos.size / 1000).toFixed(4)),
+  };
+}
+
+export function denormalizePlacement(norm: ModelNormalizedPlacement): { x: number; y: number; size: number } {
+  return {
+    x: Math.round(norm.x * 1000),
+    y: Math.round(norm.y * 1000),
+    size: Math.round(norm.size * 1000),
   };
 }
 
@@ -259,25 +359,46 @@ export function getPlaqueModel(id: PlaqueModelId): PlaqueModel {
   return PLAQUE_MODELS.find((m) => m.id === id) || PLAQUE_MODELS[0];
 }
 
-export function getModelLayout(modelId: PlaqueModelId): ModelLayoutConfig {
-  return PLAQUE_LAYOUTS[modelId] || PLAQUE_LAYOUTS.google_azul;
+export function getModelLayout(
+  modelId: PlaqueModelId,
+  customCalibrations?: ModelCalibrationsMap
+): ModelLayoutConfig {
+  const baseLayout = PLAQUE_LAYOUTS[modelId] || PLAQUE_LAYOUTS.google_azul;
+  const calib = customCalibrations?.[modelId];
+  if (!calib?.qrPlacement) {
+    return baseLayout;
+  }
+
+  const { x, y, size } = denormalizePlacement(calib.qrPlacement);
+  return {
+    ...baseLayout,
+    qr: { x, y, size },
+    qrClean: {
+      x: x - 8,
+      y: y - 8,
+      w: size + 16,
+      h: size + 16,
+      rx: baseLayout.qrClean.rx,
+    },
+  };
 }
 
 /**
  * Generates an SVG string representation of the 100x100mm plaque strictly using
- * the 3-LAYER SYSTEM requested:
+ * the 3-LAYER SYSTEM:
  *
  * CAMADA 1 — IMAGEM ORIGINAL (100% faithful to official artwork, 1:1 ratio)
- * CAMADA 2 — QR CODE DINÂMICO (positioned in designated area, clean contrast, customizable offset)
+ * CAMADA 2 — QR CODE DINÂMICO (100% square, calibrated placement, safe quiet zone)
  * CAMADA 3 — NUMERAÇÃO SEQUENCIAL (replacing only the original placeholder number)
  */
 export function generatePlaqueSVG(
   modelId: PlaqueModelId,
   plaqueNumber: string,
   qrSvgDataUri: string,
-  customQrPos?: QRPositionOffset
+  customQrPos?: QRPositionOffset,
+  customCalibrations?: ModelCalibrationsMap
 ): string {
-  const layout = PLAQUE_LAYOUTS[modelId] || PLAQUE_LAYOUTS.google_azul;
+  const layout = getModelLayout(modelId, customCalibrations);
   const asset = TEMPLATE_ASSETS[modelId] || TEMPLATE_ASSETS.google_azul;
 
   // Format displayed number
@@ -295,23 +416,17 @@ export function generatePlaqueSVG(
   const qrY = customQrPos?.y !== undefined ? customQrPos.y : layout.qr.y;
   const qrSize = customQrPos?.size !== undefined ? customQrPos.size : layout.qr.size;
 
-  const cleanX = customQrPos?.x !== undefined ? customQrPos.x - 8 : layout.qrClean.x;
-  const cleanY = customQrPos?.y !== undefined ? customQrPos.y - 8 : layout.qrClean.y;
-  let cleanW = customQrPos?.size !== undefined ? customQrPos.size + 16 : layout.qrClean.w;
-  let cleanH = customQrPos?.size !== undefined ? customQrPos.size + 16 : layout.qrClean.h;
-
-  // Safety boundary: Never encroach on 'APONTE A SUA CÂMERA' (starts at y=818 / y=823)
-  const bottomTextTopY = modelId === 'instagram_rosa' ? 816 : ['google_preto', 'google_azul_novo', 'whatsapp_verde', 'pix_pb', 'wifi_pb'].includes(modelId) ? 821 : 990;
-  if (cleanY + cleanH > bottomTextTopY) {
-    cleanH = Math.max(qrSize + 2, bottomTextTopY - cleanY - 4);
-  }
+  // Strictly square quiet zone around the QR code
+  const cleanSize = qrSize + 16;
+  const cleanX = qrX - 8;
+  const cleanY = qrY - 8;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
   <!-- CAMADA 1: ARTE ORIGINAL 100% PRESERVADA (100x100mm, proporção 1:1) -->
   <image href="${asset.base64DataUri}" width="1000" height="1000" preserveAspectRatio="none"/>
 
-  <!-- CAMADA 2: QR CODE VERDADEIRO (Área limpa e código centralizado) -->
-  <rect x="${cleanX}" y="${cleanY}" width="${cleanW}" height="${cleanH}" rx="${layout.qrClean.rx || 0}" fill="#FFFFFF"/>
+  <!-- CAMADA 2: QR CODE VERDADEIRO (Área limpa e código estritamente quadrado 1:1) -->
+  <rect x="${cleanX}" y="${cleanY}" width="${cleanSize}" height="${cleanSize}" rx="${layout.qrClean.rx || 0}" fill="#FFFFFF"/>
   <image x="${qrX}" y="${qrY}" width="${qrSize}" height="${qrSize}" href="${qrSvgDataUri}" preserveAspectRatio="xMidYMid meet"/>
 
   <!-- CAMADA 3: NUMERAÇÃO REAL (Cobre apenas a numeração ilustrativa original com a cor de fundo local) -->

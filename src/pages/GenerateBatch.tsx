@@ -122,8 +122,9 @@ export const GenerateBatch: React.FC<GenerateBatchProps> = ({ onNavigate }) => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error generating PDF:', err);
+      setErrorMessage(err?.message || 'Falha ao gerar o PDF A4 para impressão.');
     } finally {
       setDownloadingType(null);
       setDownloadProgress(null);

@@ -12,10 +12,21 @@ import {
   increment,
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase/config';
-import { Batch, QRCodeItem, PlaqueModelId, CounterState, SystemSettings, QRStatus, QRPositionOffset } from '../types';
+import {
+  Batch,
+  QRCodeItem,
+  PlaqueModelId,
+  CounterState,
+  SystemSettings,
+  QRStatus,
+  QRPositionOffset,
+  ModelCalibrationConfig,
+  ModelCalibrationsMap,
+} from '../types';
 
 export const STORAGE_BATCHES_KEY = 'dinamico_pro_batches_v2';
 export const STORAGE_ITEMS_PREFIX = 'dinamico_pro_items_v2_';
+export const STORAGE_CALIBRATIONS_KEY = 'dinamico_pro_calibrations_v1';
 
 export function saveBatchToLocalStorage(batch: Batch, items: QRCodeItem[]) {
   try {
@@ -550,4 +561,103 @@ export async function getQRCodes(): Promise<QRCodeItem[]> {
 
 export async function incrementScanCount(id: string): Promise<void> {
   return recordQRCodeScan(id);
+}
+
+/**
+ * Loads model calibrations from Firestore with local cache fallback.
+ */
+export async function getModelCalibrations(): Promise<ModelCalibrationsMap> {
+  let map: ModelCalibrationsMap = {};
+
+  // 1. Check local cache first for instant rendering
+  try {
+    const raw = localStorage.getItem(STORAGE_CALIBRATIONS_KEY);
+    if (raw) {
+      map = JSON.parse(raw);
+    }
+  } catch {
+    // ignore
+  }
+
+  // 2. Fetch from Firestore settings/modelCalibrations
+  try {
+    const docSnap = await getDoc(doc(db, 'settings', 'modelCalibrations'));
+    if (docSnap.exists()) {
+      const data = docSnap.data() as { calibrations: ModelCalibrationsMap };
+      if (data?.calibrations) {
+        map = { ...map, ...data.calibrations };
+        localStorage.setItem(STORAGE_CALIBRATIONS_KEY, JSON.stringify(map));
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch model calibrations from Firestore, using local/default:', err);
+  }
+
+  return map;
+}
+
+/**
+ * Saves calibrated coordinates for a plaque model in Firestore and local storage.
+ */
+export async function saveModelCalibration(
+  modelId: PlaqueModelId,
+  calibration: ModelCalibrationConfig
+): Promise<void> {
+  try {
+    // 1. Update in local storage immediately
+    let map: ModelCalibrationsMap = {};
+    try {
+      const raw = localStorage.getItem(STORAGE_CALIBRATIONS_KEY);
+      if (raw) map = JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    map[modelId] = calibration;
+    localStorage.setItem(STORAGE_CALIBRATIONS_KEY, JSON.stringify(map));
+
+    // 2. Persist to Firestore
+    await setDoc(
+      doc(db, 'settings', 'modelCalibrations'),
+      {
+        calibrations: {
+          [modelId]: calibration,
+        },
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'settings/modelCalibrations');
+    throw error;
+  }
+}
+
+/**
+ * Resets calibration for a model back to official defaults.
+ */
+export async function resetModelCalibration(modelId: PlaqueModelId): Promise<void> {
+  try {
+    let map: ModelCalibrationsMap = {};
+    try {
+      const raw = localStorage.getItem(STORAGE_CALIBRATIONS_KEY);
+      if (raw) map = JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    delete map[modelId];
+    localStorage.setItem(STORAGE_CALIBRATIONS_KEY, JSON.stringify(map));
+
+    await setDoc(
+      doc(db, 'settings', 'modelCalibrations'),
+      {
+        calibrations: {
+          [modelId]: null,
+        },
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn('Reset model calibration warning:', err);
+  }
 }

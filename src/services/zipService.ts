@@ -28,12 +28,12 @@ export async function generateBatchZip(
     const qrDataUri = await generateQRCodeSVGDataUri(scanUrl);
     const plaqueSvg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri, item.qrPosition);
 
-    // 2. High-res Plaque PNG (1200x1200px for 100x100mm 300+ DPI print)
-    const plaquePngBytes = await svgToPngBytes(plaqueSvg, 1200);
+    // 2. High-res Plaque PNG (1600x1600px for 100x100mm >400 DPI print)
+    const plaquePngBytes = await svgToPngBytes(plaqueSvg, 1600);
     plaquesFolder?.file(`${item.plaqueId}_100x100mm.png`, plaquePngBytes);
 
-    // 3. Standalone QR PNG
-    const qrPngDataUrl = await generateQRCodePNGDataUrl(scanUrl, { width: 1000 });
+    // 3. Standalone QR PNG (1200x1200px strictly square, 4 modules quiet zone)
+    const qrPngDataUrl = await generateQRCodePNGDataUrl(scanUrl, { width: 1200 });
     const qrBase64 = qrPngDataUrl.split(',')[1];
     qrcodesFolder?.file(`${item.qrCodeId}.png`, qrBase64, { base64: true });
 

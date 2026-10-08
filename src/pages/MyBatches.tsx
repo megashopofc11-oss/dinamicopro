@@ -16,6 +16,7 @@ import {
   ChevronRight,
   ExternalLink,
   Download,
+  AlertCircle,
 } from 'lucide-react';
 import { Batch, QRCodeItem } from '../types';
 import { getBatches, getBatchQRCodes, getSystemSettings } from '../services/firestoreService';
@@ -54,6 +55,7 @@ export const MyBatches: React.FC<MyBatchesProps> = ({
   // Edit Link Modal & View Plaque Modal
   const [editingItem, setEditingItem] = useState<QRCodeItem | null>(null);
   const [viewingItem, setViewingItem] = useState<QRCodeItem | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const loadBatches = async () => {
     try {
@@ -98,6 +100,7 @@ export const MyBatches: React.FC<MyBatchesProps> = ({
 
   const handleDownloadPdf = async (batch: Batch) => {
     try {
+      setExportError(null);
       setDownloadingBatchId(batch.id);
       setDownloadType('pdf');
       setDownloadProgress({ current: 0, total: batch.quantity });
@@ -120,8 +123,9 @@ export const MyBatches: React.FC<MyBatchesProps> = ({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error downloading PDF:', err);
+      setExportError(err?.message || 'Falha ao gerar o PDF A4 para impressão.');
     } finally {
       setDownloadingBatchId(null);
       setDownloadType(null);
@@ -237,6 +241,26 @@ export const MyBatches: React.FC<MyBatchesProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Export Error Alert Banner */}
+        {exportError && (
+          <div className="p-4 rounded-2xl bg-rose-950/80 border border-rose-500/50 text-rose-200 text-xs flex items-center justify-between gap-3 animate-fade-in shadow-xl">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+              <div>
+                <span className="font-bold block">Erro na Validação / Exportação do PDF:</span>
+                <span className="text-[11px] text-rose-300 whitespace-pre-line">{exportError}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setExportError(null)}
+              className="p-1 rounded-lg hover:bg-rose-900/50 text-rose-300 hover:text-white cursor-pointer shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Download progress banner */}
         {downloadProgress && (

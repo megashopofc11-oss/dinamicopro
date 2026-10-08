@@ -96,3 +96,26 @@ export interface BatchGenerationProgress {
   message: string;
   error?: string;
 }
+
+export interface ModelNormalizedPlacement {
+  x: number; // Normalized horizontal position (0.0 to 1.0)
+  y: number; // Normalized vertical position (0.0 to 1.0)
+  size: number; // Normalized size (0.0 to 1.0, width = height)
+}
+
+export interface ModelCalibrationConfig {
+  modelId: PlaqueModelId;
+  version: string;
+  qrPlacement: ModelNormalizedPlacement;
+  allowedArea?: {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+  };
+  safeMarginTopMm?: number;
+  safeMarginBottomMm?: number;
+  updatedAt?: string;
+}
+
+export type ModelCalibrationsMap = Partial<Record<PlaqueModelId, ModelCalibrationConfig>>;
