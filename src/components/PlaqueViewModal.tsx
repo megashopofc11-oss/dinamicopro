@@ -14,6 +14,12 @@ import {
   Clock,
   Radio,
   FileDown,
+  ArrowLeft,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 
 interface PlaqueViewModalProps {
@@ -30,29 +36,34 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
   onEditLink,
 }) => {
   const [svgContent, setSvgContent] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [renderError, setRenderError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [downloadingPng, setDownloadingPng] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
 
   const permanentUrl = `${baseUrl.replace(/\/$/, '')}/q/${item.shortCode}`;
   const model = getPlaqueModel(item.modelId);
 
-  useEffect(() => {
-    let active = true;
-    async function renderPlaque() {
-      try {
-        const qrDataUri = await generateQRCodeSVGDataUri(permanentUrl);
-        const svg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri);
-        if (active) setSvgContent(svg);
-      } catch (err) {
-        console.error('Error generating preview:', err);
-      }
+  const renderPlaque = async () => {
+    try {
+      setLoading(true);
+      setRenderError(null);
+      const qrDataUri = await generateQRCodeSVGDataUri(permanentUrl);
+      const svg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri, item.qrPosition);
+      setSvgContent(svg);
+    } catch (err: any) {
+      console.error('Error generating preview in modal:', err);
+      setRenderError(err?.message || 'Falha ao processar a arte da plaquinha.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     renderPlaque();
-    return () => {
-      active = false;
-    };
-  }, [item.modelId, item.plaqueId, permanentUrl]);
+  }, [item.modelId, item.plaqueId, permanentUrl, item.qrPosition]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(permanentUrl);
@@ -108,12 +119,18 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-[#0D0D12] w-full max-w-4xl max-h-[92vh] rounded-3xl border border-red-500/40 shadow-[0_0_60px_rgba(239,68,68,0.25)] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="p-5 border-b border-gray-800 flex items-center justify-between">
+        {/* Header with Back Button and Close Button */}
+        <div className="p-4 sm:p-5 border-b border-gray-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-red-950/80 border border-red-500/40 text-red-400">
-              <Radio className="w-5 h-5" />
-            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              title="Voltar à listagem"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-900 text-gray-300 hover:text-white hover:bg-gray-800 border border-gray-800 transition-colors cursor-pointer text-xs font-semibold"
+            >
+              <ArrowLeft className="w-4 h-4 text-red-400" />
+              <span>Voltar</span>
+            </button>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-white font-mono">
@@ -142,27 +159,78 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-          {/* Left: 1:1 Square Artwork Preview */}
-          <div className="flex flex-col items-center">
-            <div className="w-full max-w-[360px] aspect-square rounded-2xl overflow-hidden bg-black border-2 border-red-500/40 shadow-[0_0_30px_rgba(239,68,68,0.2)] relative">
-              {svgContent ? (
+        <div className="p-5 sm:p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+          {/* Left: 1:1 Square Artwork Preview with Zoom Controls */}
+          <div className="flex flex-col items-center space-y-3">
+            <div className="w-full max-w-[360px] aspect-square rounded-2xl overflow-hidden bg-black border-2 border-red-500/40 shadow-[0_0_30px_rgba(239,68,68,0.2)] relative flex items-center justify-center">
+              {loading ? (
+                <div className="w-full h-full flex flex-col items-center justify-center text-xs text-gray-400 gap-2 p-4 text-center">
+                  <div className="w-8 h-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+                  <span>Renderizando arte oficial 10 × 10 cm...</span>
+                </div>
+              ) : renderError ? (
+                <div className="w-full h-full flex flex-col items-center justify-center text-xs text-rose-300 gap-2 p-6 text-center bg-rose-950/20">
+                  <AlertTriangle className="w-8 h-8 text-rose-400" />
+                  <span className="font-semibold">{renderError}</span>
+                  <button
+                    type="button"
+                    onClick={renderPlaque}
+                    className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium text-xs cursor-pointer shadow-lg"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Tentar novamente</span>
+                  </button>
+                </div>
+              ) : svgContent ? (
                 <div
-                  className="w-full h-full [&>svg]:w-full [&>svg]:h-full select-none"
+                  className="w-full h-full [&>svg]:w-full [&>svg]:h-full select-none transition-transform duration-200"
+                  style={{
+                    transform: `scale(${zoomLevel})`,
+                    transformOrigin: 'center center',
+                  }}
                   dangerouslySetInnerHTML={{ __html: svgContent }}
                 />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-xs text-gray-500 gap-2">
-                  <div className="w-8 h-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
-                  <span>Renderizando arte oficial...</span>
-                </div>
-              )}
-              <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/85 text-[10px] font-mono text-gray-200 border border-gray-800">
-                100 × 100 mm
+              ) : null}
+
+              <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/85 text-[10px] font-mono text-gray-200 border border-gray-800 pointer-events-none">
+                100 × 100 mm (1:1)
               </div>
             </div>
-            <p className="text-[11px] text-gray-500 mt-2 font-mono">
-              Visualização exata para impressão e corte
+
+            {/* Zoom toolbar */}
+            <div className="flex items-center gap-2 bg-[#08080B] px-3 py-1.5 rounded-xl border border-gray-800 text-xs">
+              <span className="text-gray-500 text-[10px] uppercase font-bold mr-1">Zoom:</span>
+              <button
+                type="button"
+                onClick={() => setZoomLevel((z) => Math.max(0.8, Number((z - 0.2).toFixed(1))))}
+                title="Diminuir zoom"
+                className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white cursor-pointer"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <span className="font-mono text-gray-300 text-xs w-10 text-center">
+                {Math.round(zoomLevel * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoomLevel((z) => Math.min(2.0, Number((z + 0.2).toFixed(1))))}
+                title="Ampliar sem deformar"
+                className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white cursor-pointer"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoomLevel(1)}
+                title="Redefinir tamanho 100%"
+                className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white cursor-pointer ml-1"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <p className="text-[11px] text-gray-500 font-mono text-center">
+              Visualização fiel e proporcional para impressão e corte
             </p>
           </div>
 

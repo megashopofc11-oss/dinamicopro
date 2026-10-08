@@ -17,6 +17,7 @@ export interface ModelLayoutConfig {
 
 export const PLAQUE_LAYOUTS: Record<PlaqueModelId, ModelLayoutConfig> = {
   // GOOGLE — MODELO 01 (Google Alternativo / Plaquinha 01)
+  // QR Code no lado esquerdo, abaixo da frase 'APONTE A SUA CÂMERA'
   google_alternativo: {
     qrClean: { x: 105, y: 590, w: 300, h: 300, rx: 14 },
     qr: { x: 115, y: 600, size: 280 },
@@ -24,7 +25,8 @@ export const PLAQUE_LAYOUTS: Record<PlaqueModelId, ModelLayoutConfig> = {
     number: { x: 975, y: 966, fontSize: 24, anchor: 'end', color: '#111827' },
   },
 
-  // GOOGLE — MODELO 02 (Google Azul)
+  // GOOGLE — MODELO 02 (Google Azul Oficial)
+  // QR Code no lado direito, abaixo da instrução superior
   google_azul: {
     qrClean: { x: 630, y: 645, w: 280, h: 280, rx: 14 },
     qr: { x: 640, y: 655, size: 260 },
@@ -32,23 +34,25 @@ export const PLAQUE_LAYOUTS: Record<PlaqueModelId, ModelLayoutConfig> = {
     number: { x: 500, y: 980, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
-  // GOOGLE AVALIAÇÃO PRETO
+  // GOOGLE AVALIAÇÃO PRETO (Novo Modelo)
+  // Texto 'APONTE A SUA CÂMERA' inicia em y=822. QR posicionado em y=520 com margem de segurança de >50px.
   google_preto: {
-    qrClean: { x: 625, y: 535, w: 300, h: 300, rx: 14 },
-    qr: { x: 640, y: 550, size: 270 },
+    qrClean: { x: 598, y: 510, w: 270, h: 270, rx: 14 },
+    qr: { x: 608, y: 520, size: 250 },
     numCover: { x: 410, y: 945, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 965, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
-  // GOOGLE AVALIAÇÃO AZUL NOVO
+  // GOOGLE AVALIAÇÃO AZUL NOVO (Novo Modelo)
+  // Texto 'APONTE A SUA CÂMERA' inicia em y=822. QR perfeitamente centrado e livre de sobreposições.
   google_azul_novo: {
-    qrClean: { x: 625, y: 535, w: 300, h: 300, rx: 14 },
-    qr: { x: 640, y: 550, size: 270 },
+    qrClean: { x: 598, y: 510, w: 270, h: 270, rx: 14 },
+    qr: { x: 608, y: 520, size: 250 },
     numCover: { x: 410, y: 945, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 965, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
-  // INSTAGRAM (Degradê Original)
+  // INSTAGRAM CLÁSSICO (Degradê Original)
   instagram: {
     qrClean: { x: 630, y: 645, w: 280, h: 280, rx: 14 },
     qr: { x: 640, y: 655, size: 260 },
@@ -56,15 +60,16 @@ export const PLAQUE_LAYOUTS: Record<PlaqueModelId, ModelLayoutConfig> = {
     number: { x: 500, y: 968, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
-  // INSTAGRAM ROSA E ROXO
+  // INSTAGRAM ROSA E ROXO (Novo Modelo)
+  // Texto 'APONTE A SUA CÂMERA' em y=818. QR perfeitamente centralizado em x=583 com folga de segurança.
   instagram_rosa: {
-    qrClean: { x: 625, y: 535, w: 300, h: 300, rx: 14 },
-    qr: { x: 640, y: 550, size: 270 },
+    qrClean: { x: 573, y: 510, w: 270, h: 270, rx: 14 },
+    qr: { x: 583, y: 520, size: 250 },
     numCover: { x: 410, y: 945, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 965, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
-  // WHATSAPP (Original)
+  // WHATSAPP CLÁSSICO (Original)
   whatsapp: {
     qrClean: { x: 635, y: 615, w: 290, h: 290, rx: 14 },
     qr: { x: 645, y: 625, size: 270 },
@@ -72,26 +77,29 @@ export const PLAQUE_LAYOUTS: Record<PlaqueModelId, ModelLayoutConfig> = {
     number: { x: 500, y: 922, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
-  // WHATSAPP VERDE
+  // WHATSAPP VERDE (Novo Modelo)
+  // Texto 'APONTE A SUA CÂMERA' em y=824. QR em y=520, sem sobreposição do texto.
   whatsapp_verde: {
-    qrClean: { x: 625, y: 535, w: 300, h: 300, rx: 14 },
-    qr: { x: 640, y: 550, size: 270 },
+    qrClean: { x: 598, y: 510, w: 270, h: 270, rx: 14 },
+    qr: { x: 608, y: 520, size: 250 },
     numCover: { x: 410, y: 945, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 965, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
-  // PIX PRETO E BRANCO
+  // PIX PRETO E BRANCO (Novo Modelo)
+  // Texto 'APONTE A SUA CÂMERA' em y=822. QR em y=520, sem sobreposição do texto.
   pix_pb: {
-    qrClean: { x: 625, y: 535, w: 300, h: 300, rx: 14 },
-    qr: { x: 640, y: 550, size: 270 },
+    qrClean: { x: 598, y: 510, w: 270, h: 270, rx: 14 },
+    qr: { x: 608, y: 520, size: 250 },
     numCover: { x: 410, y: 945, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 965, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
-  // WI-FI PRETO E BRANCO
+  // WI-FI PRETO E BRANCO (Novo Modelo)
+  // Texto 'APONTE A SUA CÂMERA' em y=822. QR em y=520, sem sobreposição do texto.
   wifi_pb: {
-    qrClean: { x: 625, y: 535, w: 300, h: 300, rx: 14 },
-    qr: { x: 640, y: 550, size: 270 },
+    qrClean: { x: 598, y: 510, w: 270, h: 270, rx: 14 },
+    qr: { x: 608, y: 520, size: 250 },
     numCover: { x: 410, y: 945, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 965, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },

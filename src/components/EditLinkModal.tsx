@@ -50,6 +50,8 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
 
   // Live preview state
   const [previewSvg, setPreviewSvg] = useState<string>('');
+  const [previewLoading, setPreviewLoading] = useState(true);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [downloadingPng, setDownloadingPng] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
@@ -60,26 +62,28 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
   const permanentUrl = `${baseUrl.replace(/\/$/, '')}/q/${item.shortCode}`;
 
   // Live render of the plaque SVG as user tweaks inputs
-  useEffect(() => {
-    let isCurrent = true;
-    async function updatePreview() {
-      try {
-        const qrDataUri = await generateQRCodeSVGDataUri(permanentUrl);
-        const customPos: QRPositionOffset = {
-          x: posX,
-          y: posY,
-          size: posSize,
-        };
-        const svg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri, customPos);
-        if (isCurrent) setPreviewSvg(svg);
-      } catch (err) {
-        console.error('Preview render error in editor:', err);
-      }
+  const updatePreview = async () => {
+    try {
+      setPreviewLoading(true);
+      setPreviewError(null);
+      const qrDataUri = await generateQRCodeSVGDataUri(permanentUrl);
+      const customPos: QRPositionOffset = {
+        x: posX,
+        y: posY,
+        size: posSize,
+      };
+      const svg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri, customPos);
+      setPreviewSvg(svg);
+    } catch (err: any) {
+      console.error('Preview render error in editor:', err);
+      setPreviewError(err?.message || 'Falha ao renderizar prévia da plaquinha.');
+    } finally {
+      setPreviewLoading(false);
     }
+  };
+
+  useEffect(() => {
     updatePreview();
-    return () => {
-      isCurrent = false;
-    };
   }, [item.modelId, item.plaqueId, permanentUrl, posX, posY, posSize]);
 
   const handleResetPosition = () => {
@@ -273,20 +277,32 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
         <div className="p-5 sm:p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left: Live Visual Preview & Position Controls */}
           <div className="flex flex-col items-center space-y-4">
-            <div className="w-full max-w-[320px] aspect-square rounded-2xl overflow-hidden bg-black border-2 border-red-500/40 shadow-[0_0_25px_rgba(239,68,68,0.2)] relative">
-              {previewSvg ? (
+            <div className="w-full max-w-[320px] aspect-square rounded-2xl overflow-hidden bg-black border-2 border-red-500/40 shadow-[0_0_25px_rgba(239,68,68,0.2)] relative flex items-center justify-center">
+              {previewLoading ? (
+                <div className="w-full h-full flex flex-col items-center justify-center text-xs text-gray-400 gap-2 p-4 text-center">
+                  <div className="w-8 h-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+                  <span>Atualizando arte 10 × 10 cm...</span>
+                </div>
+              ) : previewError ? (
+                <div className="w-full h-full flex flex-col items-center justify-center text-xs text-rose-300 gap-2 p-4 text-center bg-rose-950/20">
+                  <AlertCircle className="w-6 h-6 text-rose-400" />
+                  <span>{previewError}</span>
+                  <button
+                    type="button"
+                    onClick={updatePreview}
+                    className="mt-1 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium text-xs cursor-pointer shadow"
+                  >
+                    <span>Tentar novamente</span>
+                  </button>
+                </div>
+              ) : previewSvg ? (
                 <div
                   className="w-full h-full [&>svg]:w-full [&>svg]:h-full select-none"
                   dangerouslySetInnerHTML={{ __html: previewSvg }}
                 />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-xs text-gray-500 gap-2">
-                  <div className="w-8 h-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
-                  <span>Atualizando arte...</span>
-                </div>
-              )}
-              <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/85 text-[10px] font-mono text-gray-300 border border-gray-800">
-                100 × 100 mm
+              ) : null}
+              <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/85 text-[10px] font-mono text-gray-300 border border-gray-800 pointer-events-none">
+                100 × 100 mm (1:1)
               </div>
             </div>
 
