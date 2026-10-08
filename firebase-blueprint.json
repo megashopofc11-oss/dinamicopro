@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "Batch": {
+      "title": "Batch",
+      "description": "Lote de plaquinhas geradas",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "batchNumber": { "type": "number" },
+        "batchCode": { "type": "string" },
+        "modelId": { "type": "string" },
+        "quantity": { "type": "number" },
+        "startNumber": { "type": "number" },
+        "endNumber": { "type": "number" },
+        "startCode": { "type": "string" },
+        "endCode": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "activeCount": { "type": "number" }
+      },
+      "required": ["id", "batchNumber", "batchCode", "modelId", "quantity", "startNumber", "endNumber", "userId", "createdAt"]
+    },
+    "QRCode": {
+      "title": "QRCode",
+      "description": "Registro de QR Code dinâmico e plaquinha associada",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "codeNumber": { "type": "number" },
+        "qrCodeId": { "type": "string" },
+        "plaqueId": { "type": "string" },
+        "shortCode": { "type": "string" },
+        "batchId": { "type": "string" },
+        "modelId": { "type": "string" },
+        "userId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "targetUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "active", "disabled"] },
+        "scanCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "codeNumber", "qrCodeId", "plaqueId", "shortCode", "batchId", "modelId", "userId", "status", "createdAt"]
+    },
+    "Counter": {
+      "title": "Counter",
+      "description": "Contador sequencial atômico para lotes e numerações de QR codes",
+      "type": "object",
+      "properties": {
+        "currentBatchNumber": { "type": "number" },
+        "currentQrNumber": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["currentBatchNumber", "currentQrNumber"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Configurações gerais do sistema e domínio de redirecionamento",
+      "type": "object",
+      "properties": {
+        "redirectBaseUrl": { "type": "string" },
+        "companyName": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "User": {
+      "title": "User",
+      "description": "Perfil de usuário do sistema",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/batches/{batchId}": {
+      "schema": "Batch",
+      "description": "Coleção de lotes gerados"
+    },
+    "/qrCodes/{qrCodeId}": {
+      "schema": "QRCode",
+      "description": "Coleção de QR codes e plaquinhas dinâmicas"
+    },
+    "/counters/{counterId}": {
+      "schema": "Counter",
+      "description": "Contadores atômicos para numeração ininterrupta"
+    },
+    "/settings/{settingId}": {
+      "schema": "Setting",
+      "description": "Configurações globais de domínio e parâmetros do gerador"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Dados de usuários autenticados"
+    }
+  }
+}
