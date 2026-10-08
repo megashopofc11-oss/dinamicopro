@@ -317,6 +317,7 @@ export const ManageQRCodes: React.FC<ManageQRCodesProps> = ({
               prev.map((i) => (i.id === updated.id ? updated : i))
             );
             setEditingItem(null);
+            setViewingItem(updated);
           }}
         />
       )}

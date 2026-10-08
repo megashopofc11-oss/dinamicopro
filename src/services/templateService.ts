@@ -17,7 +17,7 @@ export interface ModelLayoutConfig {
 
 export const PLAQUE_LAYOUTS: Record<PlaqueModelId, ModelLayoutConfig> = {
   // GOOGLE — MODELO 01 (Google Alternativo / Plaquinha 01)
-  // QR Code no lado esquerdo, abaixo da frase 'APONTE A SUA CÂMERA'
+  // QR Code no lado esquerdo, abaixo da frase 'APONTE A SUA CÂMERA' (que termina em y=412)
   google_alternativo: {
     qrClean: { x: 105, y: 590, w: 300, h: 300, rx: 14 },
     qr: { x: 115, y: 600, size: 280 },
@@ -26,80 +26,88 @@ export const PLAQUE_LAYOUTS: Record<PlaqueModelId, ModelLayoutConfig> = {
   },
 
   // GOOGLE — MODELO 02 (Google Azul Oficial)
-  // QR Code no lado direito, abaixo da instrução superior
+  // QR Code perfeitamente centralizado na ilustração da tela do smartphone (sem sobreposições)
   google_azul: {
-    qrClean: { x: 630, y: 645, w: 280, h: 280, rx: 14 },
-    qr: { x: 640, y: 655, size: 260 },
+    qrClean: { x: 655, y: 575, w: 235, h: 235, rx: 12 },
+    qr: { x: 665, y: 585, size: 215 },
     numCover: { x: 410, y: 960, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 980, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
   // GOOGLE AVALIAÇÃO PRETO (Novo Modelo)
-  // Texto 'APONTE A SUA CÂMERA' inicia em y=822. QR posicionado em y=520 com margem de segurança de >50px.
+  // Texto 'APONTE A SUA CÂMERA' inicia em y=823. Topo termina em y=360.
+  // QR posicionado em y=465 com tamanho 240: termina em y=705, garantindo >115px de folga total sem sobrepor texto!
   google_preto: {
-    qrClean: { x: 598, y: 510, w: 270, h: 270, rx: 14 },
-    qr: { x: 608, y: 520, size: 250 },
+    qrClean: { x: 546, y: 455, w: 260, h: 260, rx: 14 },
+    qr: { x: 556, y: 465, size: 240 },
     numCover: { x: 410, y: 945, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 965, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
   // GOOGLE AVALIAÇÃO AZUL NOVO (Novo Modelo)
-  // Texto 'APONTE A SUA CÂMERA' inicia em y=822. QR perfeitamente centrado e livre de sobreposições.
+  // Texto 'APONTE A SUA CÂMERA' inicia em y=823.
+  // QR posicionado em y=465 com tamanho 240: termina em y=705, margem de segurança >115px.
   google_azul_novo: {
-    qrClean: { x: 598, y: 510, w: 270, h: 270, rx: 14 },
-    qr: { x: 608, y: 520, size: 250 },
+    qrClean: { x: 546, y: 455, w: 260, h: 260, rx: 14 },
+    qr: { x: 556, y: 465, size: 240 },
     numCover: { x: 410, y: 945, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 965, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
   // INSTAGRAM CLÁSSICO (Degradê Original)
+  // Centralizado perfeitamente na moldura do smartphone
   instagram: {
-    qrClean: { x: 630, y: 645, w: 280, h: 280, rx: 14 },
-    qr: { x: 640, y: 655, size: 260 },
+    qrClean: { x: 655, y: 570, w: 235, h: 235, rx: 12 },
+    qr: { x: 665, y: 580, size: 215 },
     numCover: { x: 410, y: 948, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 968, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
   // INSTAGRAM ROSA E ROXO (Novo Modelo)
-  // Texto 'APONTE A SUA CÂMERA' em y=818. QR perfeitamente centralizado em x=583 com folga de segurança.
+  // Texto 'APONTE A SUA CÂMERA' inicia em y=818. Header termina em y=455.
+  // QR posicionado em y=526 com tamanho 220: termina em y=746, margem de segurança >70px preservando todo o texto.
   instagram_rosa: {
-    qrClean: { x: 573, y: 510, w: 270, h: 270, rx: 14 },
-    qr: { x: 583, y: 520, size: 250 },
+    qrClean: { x: 537, y: 516, w: 240, h: 240, rx: 14 },
+    qr: { x: 547, y: 526, size: 220 },
     numCover: { x: 410, y: 945, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 965, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
   // WHATSAPP CLÁSSICO (Original)
+  // QR Code perfeitamente alinhado na área reservada
   whatsapp: {
-    qrClean: { x: 635, y: 615, w: 290, h: 290, rx: 14 },
-    qr: { x: 645, y: 625, size: 270 },
+    qrClean: { x: 597, y: 493, w: 260, h: 260, rx: 14 },
+    qr: { x: 607, y: 503, size: 240 },
     numCover: { x: 410, y: 902, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 922, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
   // WHATSAPP VERDE (Novo Modelo)
-  // Texto 'APONTE A SUA CÂMERA' em y=824. QR em y=520, sem sobreposição do texto.
+  // Texto 'APONTE A SUA CÂMERA' inicia em y=823. Header termina em y=505.
+  // QR posicionado em y=559 com tamanho 210: termina em y=769, mantendo 54px de folga total sem tocar no texto.
   whatsapp_verde: {
-    qrClean: { x: 598, y: 510, w: 270, h: 270, rx: 14 },
-    qr: { x: 608, y: 520, size: 250 },
+    qrClean: { x: 562, y: 549, w: 230, h: 230, rx: 14 },
+    qr: { x: 572, y: 559, size: 210 },
     numCover: { x: 410, y: 945, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 965, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
   // PIX PRETO E BRANCO (Novo Modelo)
-  // Texto 'APONTE A SUA CÂMERA' em y=822. QR em y=520, sem sobreposição do texto.
+  // Texto 'APONTE A SUA CÂMERA' inicia em y=823. Header termina em y=528.
+  // QR posicionado em y=575 com tamanho 200: termina em y=775, margem de segurança de 48px.
   pix_pb: {
-    qrClean: { x: 598, y: 510, w: 270, h: 270, rx: 14 },
-    qr: { x: 608, y: 520, size: 250 },
+    qrClean: { x: 566, y: 565, w: 220, h: 220, rx: 14 },
+    qr: { x: 576, y: 575, size: 200 },
     numCover: { x: 410, y: 945, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 965, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
 
   // WI-FI PRETO E BRANCO (Novo Modelo)
-  // Texto 'APONTE A SUA CÂMERA' em y=822. QR em y=520, sem sobreposição do texto.
+  // Texto 'APONTE A SUA CÂMERA' inicia em y=823. Header termina em y=527.
+  // QR posicionado em y=575 com tamanho 200: termina em y=775, margem de segurança de 48px.
   wifi_pb: {
-    qrClean: { x: 598, y: 510, w: 270, h: 270, rx: 14 },
-    qr: { x: 608, y: 520, size: 250 },
+    qrClean: { x: 566, y: 565, w: 220, h: 220, rx: 14 },
+    qr: { x: 576, y: 575, size: 200 },
     numCover: { x: 410, y: 945, w: 180, h: 30, color: '#FFFFFF' },
     number: { x: 500, y: 965, fontSize: 18, anchor: 'middle', color: '#111827', prefix: '#' },
   },
@@ -251,6 +259,10 @@ export function getPlaqueModel(id: PlaqueModelId): PlaqueModel {
   return PLAQUE_MODELS.find((m) => m.id === id) || PLAQUE_MODELS[0];
 }
 
+export function getModelLayout(modelId: PlaqueModelId): ModelLayoutConfig {
+  return PLAQUE_LAYOUTS[modelId] || PLAQUE_LAYOUTS.google_azul;
+}
+
 /**
  * Generates an SVG string representation of the 100x100mm plaque strictly using
  * the 3-LAYER SYSTEM requested:
@@ -283,10 +295,16 @@ export function generatePlaqueSVG(
   const qrY = customQrPos?.y !== undefined ? customQrPos.y : layout.qr.y;
   const qrSize = customQrPos?.size !== undefined ? customQrPos.size : layout.qr.size;
 
-  const cleanX = customQrPos?.x !== undefined ? customQrPos.x - 10 : layout.qrClean.x;
-  const cleanY = customQrPos?.y !== undefined ? customQrPos.y - 10 : layout.qrClean.y;
-  const cleanW = customQrPos?.size !== undefined ? customQrPos.size + 20 : layout.qrClean.w;
-  const cleanH = customQrPos?.size !== undefined ? customQrPos.size + 20 : layout.qrClean.h;
+  const cleanX = customQrPos?.x !== undefined ? customQrPos.x - 8 : layout.qrClean.x;
+  const cleanY = customQrPos?.y !== undefined ? customQrPos.y - 8 : layout.qrClean.y;
+  let cleanW = customQrPos?.size !== undefined ? customQrPos.size + 16 : layout.qrClean.w;
+  let cleanH = customQrPos?.size !== undefined ? customQrPos.size + 16 : layout.qrClean.h;
+
+  // Safety boundary: Never encroach on 'APONTE A SUA CÂMERA' (starts at y=818 / y=823)
+  const bottomTextTopY = modelId === 'instagram_rosa' ? 816 : ['google_preto', 'google_azul_novo', 'whatsapp_verde', 'pix_pb', 'wifi_pb'].includes(modelId) ? 821 : 990;
+  if (cleanY + cleanH > bottomTextTopY) {
+    cleanH = Math.max(qrSize + 2, bottomTextTopY - cleanY - 4);
+  }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
   <!-- CAMADA 1: ARTE ORIGINAL 100% PRESERVADA (100x100mm, proporção 1:1) -->

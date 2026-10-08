@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { QRCodeItem, QRStatus, QRPositionOffset } from '../types';
 import { updateQRCodeDestination } from '../services/firestoreService';
-import { generatePlaqueSVG, getPlaqueModel, PLAQUE_LAYOUTS } from '../services/templateService';
+import {
+  generatePlaqueSVG,
+  getPlaqueModel,
+  getModelLayout,
+} from '../services/templateService';
 import { generateQRCodeSVGDataUri } from '../services/qrGeneratorService';
 import { generateSinglePlaquePdf, createPdfBlob, svgToPngBytes } from '../services/pdfService';
+import { ErrorBoundary } from './ErrorBoundary';
 import {
   X,
   ExternalLink,
@@ -18,29 +24,29 @@ import {
   FileDown,
   Check,
   Copy,
-  Radio,
+  RefreshCw,
 } from 'lucide-react';
 
 interface EditLinkModalProps {
-  item: QRCodeItem;
+  item: QRCodeItem | null;
   baseUrl: string;
   onClose: () => void;
   onSaved: (updatedItem: QRCodeItem) => void;
 }
 
-export const EditLinkModal: React.FC<EditLinkModalProps> = ({
-  item,
-  baseUrl,
-  onClose,
-  onSaved,
-}) => {
+const EditLinkModalContent: React.FC<{
+  item: QRCodeItem;
+  baseUrl: string;
+  onClose: () => void;
+  onSaved: (updatedItem: QRCodeItem) => void;
+}> = ({ item, baseUrl, onClose, onSaved }) => {
   const model = getPlaqueModel(item.modelId);
-  const defaultLayout = PLAQUE_LAYOUTS[item.modelId] || PLAQUE_LAYOUTS.google_azul;
+  const defaultLayout = getModelLayout(item.modelId);
 
-  const [targetUrl, setTargetUrl] = useState(item.targetUrl || '');
-  const [clientName, setClientName] = useState(item.clientName || '');
-  const [status, setStatus] = useState<QRStatus>(item.status);
-  const [notes, setNotes] = useState(item.notes || '');
+  const [targetUrl, setTargetUrl] = useState<string>(item.targetUrl || '');
+  const [clientName, setClientName] = useState<string>(item.clientName || '');
+  const [status, setStatus] = useState<QRStatus>(item.status || 'pending');
+  const [notes, setNotes] = useState<string>(item.notes || '');
 
   // QR Position Offset state (per-plaque custom adjustment)
   const [posX, setPosX] = useState<number>(item.qrPosition?.x ?? defaultLayout.qr.x);
@@ -59,7 +65,17 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
   const [success, setSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const permanentUrl = `${baseUrl.replace(/\/$/, '')}/q/${item.shortCode}`;
+  const cleanBaseUrl = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+  const permanentUrl = `${cleanBaseUrl.replace(/\/$/, '')}/q/${item.shortCode || item.id || ''}`;
+
+  // Prevent background scrolling while modal is open
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
 
   // Live render of the plaque SVG as user tweaks inputs
   const updatePreview = async () => {
@@ -123,7 +139,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
       }
     }
 
-    // Auto-status logic
+    // Auto-status logic: if URL entered, activate; if cleared, mark pending
     let finalStatus: QRStatus = status;
     if (cleanUrl && status === 'pending') {
       finalStatus = 'active';
@@ -163,10 +179,10 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
       setTimeout(() => {
         onSaved(updated);
         onClose();
-      }, 600);
+      }, 500);
     } catch (err: any) {
       console.error('Error saving plaque in Firebase:', err);
-      setError(err?.message || 'Falha ao salvar no Firebase. Verifique a conexão.');
+      setError(err?.message || 'Falha ao salvar no Firebase. Verifique a conexão com a internet.');
       setSaving(false);
     }
   };
@@ -193,7 +209,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${item.plaqueId}_${model.shortName}_10x10cm.png`;
+      a.download = `${item.plaqueId}_${model.shortName.replace(/\s+/g, '_')}_10x10cm.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -212,12 +228,12 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
         ...item,
         qrPosition: { x: posX, y: posY, size: posSize },
       };
-      const pdfBytes = await generateSinglePlaquePdf(itemWithCurrentPos, baseUrl);
+      const pdfBytes = await generateSinglePlaquePdf(itemWithCurrentPos, cleanBaseUrl);
       const blob = createPdfBlob(pdfBytes);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${item.plaqueId}_${model.shortName}_10x10cm.pdf`;
+      a.download = `${item.plaqueId}_${model.shortName.replace(/\s+/g, '_')}_10x10cm.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -230,34 +246,40 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto">
-      <div className="bg-[#0D0D12] w-full max-w-4xl rounded-3xl border border-red-500/40 shadow-[0_0_60px_rgba(239,68,68,0.25)] flex flex-col max-h-[94vh] overflow-hidden">
+    <div
+      className="fixed inset-0 z-[999999] bg-black/90 backdrop-blur-md overflow-y-auto p-3 sm:p-6 flex min-h-screen items-center justify-center animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !saving) onClose();
+      }}
+    >
+      <div className="bg-[#0D0D12] w-full max-w-4xl rounded-3xl border border-red-500/40 shadow-[0_0_60px_rgba(239,68,68,0.25)] flex flex-col my-auto overflow-hidden relative">
         {/* Top Header */}
-        <div className="p-4 sm:p-5 border-b border-gray-800 flex items-center justify-between shrink-0">
+        <div className="p-4 sm:p-5 border-b border-gray-800 flex items-center justify-between shrink-0 bg-[#0A0A0F]">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onClose}
               disabled={saving}
               title="Voltar"
-              className="p-2 rounded-xl bg-gray-900 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-900 text-gray-300 hover:text-white hover:bg-gray-800 border border-gray-800 transition-colors cursor-pointer text-xs font-semibold disabled:opacity-50"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4 text-red-400" />
+              <span>Voltar</span>
             </button>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-mono text-red-400 font-bold text-sm bg-red-950/80 px-2 py-0.5 rounded-lg border border-red-500/30">
                   {item.plaqueId}
                 </span>
                 <span className="text-xs text-gray-400 font-mono">
-                  • {item.batchId}
+                  • {item.qrCodeId}
                 </span>
                 <span className="text-xs text-white font-medium">
                   • {model.name}
                 </span>
               </div>
-              <h3 className="text-base font-bold text-white mt-0.5">
-                Editor Individual de Plaquinha
+              <h3 className="text-sm font-bold text-gray-200 mt-0.5">
+                Editor Individual da Plaquinha
               </h3>
             </div>
           </div>
@@ -267,14 +289,14 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
             onClick={onClose}
             disabled={saving}
             title="Fechar"
-            className="p-2 rounded-xl bg-gray-900 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-gray-900 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors cursor-pointer disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-5 sm:p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left: Live Visual Preview & Position Controls */}
           <div className="flex flex-col items-center space-y-4">
             <div className="w-full max-w-[320px] aspect-square rounded-2xl overflow-hidden bg-black border-2 border-red-500/40 shadow-[0_0_25px_rgba(239,68,68,0.2)] relative flex items-center justify-center">
@@ -292,6 +314,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
                     onClick={updatePreview}
                     className="mt-1 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium text-xs cursor-pointer shadow"
                   >
+                    <RefreshCw className="w-3.5 h-3.5" />
                     <span>Tentar novamente</span>
                   </button>
                 </div>
@@ -302,7 +325,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
                 />
               ) : null}
               <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/85 text-[10px] font-mono text-gray-300 border border-gray-800 pointer-events-none">
-                100 × 100 mm (1:1)
+                10 × 10 cm (1:1)
               </div>
             </div>
 
@@ -315,7 +338,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
                   className="flex items-center gap-1.5 text-gray-300 hover:text-white font-semibold cursor-pointer"
                 >
                   <Sliders className="w-3.5 h-3.5 text-red-400" />
-                  <span>Ajuste de Posição do QR Code</span>
+                  <span>{showAdjustments ? 'Ocultar Ajuste Fino' : 'Ajustar Posição do QR Code'}</span>
                 </button>
                 <button
                   type="button"
@@ -351,7 +374,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
                     </div>
                     <input
                       type="range"
-                      min={50}
+                      min={100}
                       max={750}
                       value={posY}
                       onChange={(e) => setPosY(Number(e.target.value))}
@@ -367,7 +390,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
                     <input
                       type="range"
                       min={160}
-                      max={400}
+                      max={350}
                       value={posSize}
                       onChange={(e) => setPosSize(Number(e.target.value))}
                       className="w-full accent-red-500 cursor-pointer"
@@ -386,7 +409,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
                 className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold bg-gray-900 hover:bg-gray-800 text-white border border-gray-700 transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Download className="w-3.5 h-3.5 text-red-400" />
-                <span>{downloadingPng ? '...' : 'Baixar PNG'}</span>
+                <span>{downloadingPng ? 'Baixando...' : 'Baixar PNG'}</span>
               </button>
 
               <button
@@ -396,7 +419,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
                 className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold bg-gray-900 hover:bg-gray-800 text-white border border-gray-700 transition-colors cursor-pointer disabled:opacity-50"
               >
                 <FileDown className="w-3.5 h-3.5 text-red-400" />
-                <span>{downloadingPdf ? '...' : 'Baixar PDF'}</span>
+                <span>{downloadingPdf ? 'Baixando...' : 'Baixar PDF'}</span>
               </button>
             </div>
           </div>
@@ -407,7 +430,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
             {success && (
               <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                <span className="font-semibold">Plaquinha atualizada com sucesso!</span>
+                <span className="font-semibold">Plaquinha gravada e confirmada no Firebase!</span>
               </div>
             )}
 
@@ -429,7 +452,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
                   onClick={handleTestRedirect}
                   className="text-[10px] text-red-400 hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <span>Testar QR Code</span>
+                  <span>Testar Link</span>
                   <ExternalLink className="w-3 h-3" />
                 </button>
               </div>
@@ -530,13 +553,13 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
               {/* Notes */}
               <div>
                 <label className="block text-xs font-bold text-gray-200 mb-1.5">
-                  Anotações de Venda / Observações (Opcional)
+                  Anotações / Observações (Opcional)
                 </label>
                 <textarea
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Ex: Vendida com plaquinha acrílica 10x10cm, cliente pagou no Pix..."
+                  placeholder="Ex: Entregue para cliente em acrílico 10x10cm..."
                   className="w-full px-4 py-2 rounded-xl bg-[#08080B] border border-gray-700 focus:border-red-500 focus:ring-1 focus:ring-red-500 text-white text-xs outline-none resize-none"
                 />
               </div>
@@ -547,9 +570,9 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
                   type="button"
                   onClick={onClose}
                   disabled={saving}
-                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white bg-gray-900 hover:bg-gray-800 transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white bg-gray-900 hover:bg-gray-800 transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  Voltar
+                  Voltar aos lotes
                 </button>
 
                 <button
@@ -569,5 +592,35 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({
         </div>
       </div>
     </div>
+  );
+};
+
+export const EditLinkModal: React.FC<EditLinkModalProps> = ({
+  item,
+  baseUrl,
+  onClose,
+  onSaved,
+}) => {
+  if (!item) {
+    return null;
+  }
+
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(
+    <ErrorBoundary
+      fallbackTitle="Erro ao carregar editor da plaquinha"
+      onReset={onClose}
+    >
+      <EditLinkModalContent
+        item={item}
+        baseUrl={baseUrl}
+        onClose={onClose}
+        onSaved={onSaved}
+      />
+    </ErrorBoundary>,
+    document.body
   );
 };

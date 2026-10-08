@@ -9,6 +9,8 @@ import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
 import { RedirectHandler } from './pages/RedirectHandler';
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 function MainApp() {
   const { currentUser, loading } = useAuth();
   const [activePage, setActivePage] = useState<ActivePage>('dashboard');
@@ -90,8 +92,10 @@ function MainApp() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
+    <ErrorBoundary fallbackTitle="Erro no Dinâmico Pro" onReset={() => window.location.reload()}>
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

@@ -476,6 +476,7 @@ export const GenerateBatch: React.FC<GenerateBatchProps> = ({ onNavigate }) => {
                   prev.map((i) => (i.id === updated.id ? updated : i))
                 );
                 setEditingItem(null);
+                setViewingItem(updated);
               }}
             />
           )}

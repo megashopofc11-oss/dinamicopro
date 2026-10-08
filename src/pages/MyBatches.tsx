@@ -305,6 +305,7 @@ export const MyBatches: React.FC<MyBatchesProps> = ({
                 prev.map((i) => (i.id === updated.id ? updated : i))
               );
               setEditingItem(null);
+              setViewingItem(updated);
             }}
           />
         )}

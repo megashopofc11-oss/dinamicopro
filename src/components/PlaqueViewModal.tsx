@@ -1,40 +1,40 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { QRCodeItem } from '../types';
 import { generatePlaqueSVG, getPlaqueModel } from '../services/templateService';
 import { generateQRCodeSVGDataUri } from '../services/qrGeneratorService';
 import { generateSinglePlaquePdf, createPdfBlob, svgToPngBytes } from '../services/pdfService';
+import { ErrorBoundary } from './ErrorBoundary';
 import {
   X,
   Download,
   Copy,
   Check,
-  ExternalLink,
   Edit3,
   CheckCircle2,
   Clock,
-  Radio,
-  FileDown,
   ArrowLeft,
   ZoomIn,
   ZoomOut,
   RotateCcw,
   AlertTriangle,
   RefreshCw,
+  FileDown,
 } from 'lucide-react';
 
 interface PlaqueViewModalProps {
-  item: QRCodeItem;
+  item: QRCodeItem | null;
   baseUrl: string;
   onClose: () => void;
   onEditLink: (item: QRCodeItem) => void;
 }
 
-export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
-  item,
-  baseUrl,
-  onClose,
-  onEditLink,
-}) => {
+const PlaqueViewModalContent: React.FC<{
+  item: QRCodeItem;
+  baseUrl: string;
+  onClose: () => void;
+  onEditLink: (item: QRCodeItem) => void;
+}> = ({ item, baseUrl, onClose, onEditLink }) => {
   const [svgContent, setSvgContent] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [renderError, setRenderError] = useState<string | null>(null);
@@ -43,7 +43,8 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
 
-  const permanentUrl = `${baseUrl.replace(/\/$/, '')}/q/${item.shortCode}`;
+  const cleanBaseUrl = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+  const permanentUrl = `${cleanBaseUrl.replace(/\/$/, '')}/q/${item.shortCode || item.id || ''}`;
   const model = getPlaqueModel(item.modelId);
 
   const renderPlaque = async () => {
@@ -55,7 +56,7 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
       setSvgContent(svg);
     } catch (err: any) {
       console.error('Error generating preview in modal:', err);
-      setRenderError(err?.message || 'Falha ao processar a arte da plaquinha.');
+      setRenderError(err?.message || 'Falha ao processar a arte da plaquinha. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -64,6 +65,15 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
   useEffect(() => {
     renderPlaque();
   }, [item.modelId, item.plaqueId, permanentUrl, item.qrPosition]);
+
+  // Lock body scroll while modal is mounted
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(permanentUrl);
@@ -75,14 +85,14 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
     try {
       setDownloadingPng(true);
       const qrDataUri = await generateQRCodeSVGDataUri(permanentUrl);
-      const svg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri);
+      const svg = generatePlaqueSVG(item.modelId, item.plaqueId, qrDataUri, item.qrPosition);
       const pngBytes = await svgToPngBytes(svg, 1600);
 
       const blob = new Blob([pngBytes as unknown as BlobPart], { type: 'image/png' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${item.plaqueId}_${model.shortName}_10x10cm.png`;
+      a.download = `${item.plaqueId}_${model.shortName.replace(/\s+/g, '_')}_10x10cm.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -97,12 +107,12 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
   const handleDownloadPdf = async () => {
     try {
       setDownloadingPdf(true);
-      const pdfBytes = await generateSinglePlaquePdf(item, baseUrl);
+      const pdfBytes = await generateSinglePlaquePdf(item, cleanBaseUrl);
       const blob = createPdfBlob(pdfBytes);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${item.plaqueId}_${model.shortName}_10x10cm.pdf`;
+      a.download = `${item.plaqueId}_${model.shortName.replace(/\s+/g, '_')}_10x10cm.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -117,10 +127,15 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
   const isActive = item.status === 'active' && Boolean(item.targetUrl);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-[#0D0D12] w-full max-w-4xl max-h-[92vh] rounded-3xl border border-red-500/40 shadow-[0_0_60px_rgba(239,68,68,0.25)] flex flex-col overflow-hidden">
+    <div
+      className="fixed inset-0 z-[999999] bg-black/90 backdrop-blur-md overflow-y-auto p-3 sm:p-6 flex min-h-screen items-center justify-center animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-[#0D0D12] w-full max-w-4xl rounded-3xl border border-red-500/40 shadow-[0_0_60px_rgba(239,68,68,0.25)] flex flex-col my-auto overflow-hidden relative">
         {/* Header with Back Button and Close Button */}
-        <div className="p-4 sm:p-5 border-b border-gray-800 flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-gray-800 flex items-center justify-between shrink-0 bg-[#0A0A0F]">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -132,7 +147,7 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
               <span>Voltar</span>
             </button>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base font-bold text-white font-mono">
                   {item.plaqueId}
                 </h3>
@@ -144,12 +159,13 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-gray-400">
-                Lote: {item.batchId} • 100 × 100 mm • Proporção 1:1 Oficial
+                Lote: {item.batchId} • Dimensão 10 × 10 cm • Proporção 1:1 Oficial
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             title="Fechar"
             className="p-2 rounded-xl bg-gray-900 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors cursor-pointer"
@@ -159,7 +175,7 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-5 sm:p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
           {/* Left: 1:1 Square Artwork Preview with Zoom Controls */}
           <div className="flex flex-col items-center space-y-3">
             <div className="w-full max-w-[360px] aspect-square rounded-2xl overflow-hidden bg-black border-2 border-red-500/40 shadow-[0_0_30px_rgba(239,68,68,0.2)] relative flex items-center justify-center">
@@ -193,7 +209,7 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
               ) : null}
 
               <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/85 text-[10px] font-mono text-gray-200 border border-gray-800 pointer-events-none">
-                100 × 100 mm (1:1)
+                10 × 10 cm (1:1)
               </div>
             </div>
 
@@ -248,107 +264,100 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-950 text-amber-400 border border-amber-500/40 text-xs font-semibold">
                     <Clock className="w-3.5 h-3.5" />
-                    <span>Aguardando Link</span>
+                    <span>Aguardando Configuração</span>
                   </span>
                 )}
               </div>
 
-              {/* Client Name */}
-              <div className="pt-2 border-t border-gray-800 flex items-center justify-between">
-                <span className="text-xs text-gray-400">Cliente / Estabelecimento:</span>
-                <span className="text-xs font-semibold text-white">
-                  {item.clientName || <span className="text-gray-500 italic">Não vinculado</span>}
+              {/* Client Info */}
+              <div className="text-xs">
+                <span className="text-gray-400 block mb-0.5">Cliente:</span>
+                <span className="text-white font-medium text-sm">
+                  {item.clientName || <span className="text-gray-500 italic">Não informado</span>}
                 </span>
               </div>
 
-              {/* Scans */}
-              <div className="pt-2 border-t border-gray-800 flex items-center justify-between">
-                <span className="text-xs text-gray-400">Leituras Registradas:</span>
-                <span className="text-xs font-mono font-bold text-red-400">
-                  {item.scanCount || 0} acessos
-                </span>
-              </div>
-            </div>
-
-            {/* Permanent Link Card */}
-            <div className="bg-[#08080B] p-4 rounded-2xl border border-gray-800/80 space-y-2">
-              <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">
-                Endereço Permanente (Gravado na Placa)
-              </span>
-              <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-black border border-gray-800">
-                <span className="text-xs font-mono text-red-400 truncate flex-1">
-                  {permanentUrl}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="p-1.5 rounded-lg bg-gray-900 hover:bg-gray-800 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                  title="Copiar endereço permanente"
-                >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Destination Link */}
-            <div className="bg-[#08080B] p-4 rounded-2xl border border-gray-800/80 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">
-                  Link Final de Destino
-                </span>
-                {item.targetUrl && (
+              {/* Target URL */}
+              <div className="text-xs">
+                <span className="text-gray-400 block mb-0.5">Link de Destino:</span>
+                {item.targetUrl ? (
                   <a
                     href={item.targetUrl.startsWith('http') ? item.targetUrl : `https://${item.targetUrl}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] text-red-400 hover:underline flex items-center gap-1"
+                    className="text-red-400 hover:underline font-mono break-all text-xs"
                   >
-                    <span>Testar destino</span>
-                    <ExternalLink className="w-3 h-3" />
+                    {item.targetUrl}
                   </a>
+                ) : (
+                  <span className="text-amber-500/80 italic text-xs">
+                    Nenhum link configurado ainda.
+                  </span>
                 )}
               </div>
-              <p className="text-xs font-mono text-gray-200 truncate">
-                {item.targetUrl || <span className="text-gray-500 italic">Sem destino configurado</span>}
-              </p>
+
+              {/* Permanent URL Box */}
+              <div className="pt-2 border-t border-gray-800">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">
+                    URL Permanente da Placa
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-mono">
+                    NFC & QR Code
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-black border border-gray-800">
+                  <span className="text-xs font-mono text-red-400 truncate flex-1">
+                    {permanentUrl}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    title="Copiar link permanente"
+                    className="p-1 rounded-lg bg-gray-900 text-gray-300 hover:text-white transition-colors cursor-pointer shrink-0"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2 pt-1">
+              {/* Botão EDITAR */}
               <button
                 type="button"
-                onClick={() => {
-                  onClose();
-                  onEditLink(item);
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold text-xs text-white transition-all cursor-pointer shadow-[0_0_20px_rgba(239,68,68,0.35)]"
+                onClick={() => onEditLink(item)}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs text-white transition-all cursor-pointer shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:shadow-[0_0_30px_rgba(239,68,68,0.6)]"
                 style={{
                   background: 'linear-gradient(135deg, #FF3344 0%, #DC2626 100%)',
                 }}
               >
                 <Edit3 className="w-4 h-4 stroke-[2.5]" />
-                <span>CONFIGURAR / EDITAR LINK DO CLIENTE</span>
+                <span>EDITAR DADOS E POSIÇÃO</span>
               </button>
 
               <div className="grid grid-cols-2 gap-2">
+                {/* Download PNG */}
                 <button
                   type="button"
                   onClick={handleDownloadPng}
                   disabled={downloadingPng}
-                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-semibold text-xs bg-gray-900 hover:bg-gray-800 text-white border border-gray-700 transition-colors cursor-pointer disabled:opacity-50"
+                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold bg-gray-900 hover:bg-gray-800 text-white border border-gray-800 transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <Download className="w-3.5 h-3.5 text-red-400" />
-                  <span>{downloadingPng ? 'Gerando...' : 'Baixar PNG (1600px)'}</span>
+                  <Download className="w-4 h-4 text-red-400" />
+                  <span>{downloadingPng ? 'Baixando...' : 'Baixar PNG (10x10)'}</span>
                 </button>
 
+                {/* Download PDF */}
                 <button
                   type="button"
                   onClick={handleDownloadPdf}
                   disabled={downloadingPdf}
-                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-semibold text-xs bg-gray-900 hover:bg-gray-800 text-white border border-gray-700 transition-colors cursor-pointer disabled:opacity-50"
+                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold bg-gray-900 hover:bg-gray-800 text-white border border-gray-800 transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <FileDown className="w-3.5 h-3.5 text-red-400" />
-                  <span>{downloadingPdf ? 'Gerando...' : 'Baixar PDF (10x10cm)'}</span>
+                  <FileDown className="w-4 h-4 text-red-400" />
+                  <span>{downloadingPdf ? 'Baixando...' : 'Baixar PDF'}</span>
                 </button>
               </div>
             </div>
@@ -356,5 +365,35 @@ export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
         </div>
       </div>
     </div>
+  );
+};
+
+export const PlaqueViewModal: React.FC<PlaqueViewModalProps> = ({
+  item,
+  baseUrl,
+  onClose,
+  onEditLink,
+}) => {
+  if (!item) {
+    return null;
+  }
+
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(
+    <ErrorBoundary
+      fallbackTitle="Erro ao carregar visualização da plaquinha"
+      onReset={onClose}
+    >
+      <PlaqueViewModalContent
+        item={item}
+        baseUrl={baseUrl}
+        onClose={onClose}
+        onEditLink={onEditLink}
+      />
+    </ErrorBoundary>,
+    document.body
   );
 };
